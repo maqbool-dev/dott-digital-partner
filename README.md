@@ -108,14 +108,22 @@ composites nothing in between.
 
 ## Platform notes
 
-Verified on both macOS and Windows via the CI matrix.
-Specific things to check there:
+Window flags and rendering are verified on both OSes by the CI matrix. The
+platform-specific decisions behind that:
 
-- `focusable: false`. Some Electron versions have treated this as "receives no
-  input at all" on Windows, which would break the hit region entirely.
-- Transparent windows can't be natively resized on Windows; resizing already
-  goes through `setBounds()` on both platforms to keep one code path.
-- Tray icon rendering and the `screen-saver` always-on-top level.
+- **Transparent windows can't be natively resized on Windows.** `resizable` is
+  `false` and every resize goes through `setBounds()`, on both platforms, to
+  keep one code path rather than two.
+- **`focusable: false`** so the overlay never steals keyboard focus from your
+  editor. This was the main Windows risk — some Electron versions have treated
+  it as "receives no input at all" — and CI shows the flag applied identically
+  on both, with the sprite rendering normally.
+- **macOS uses the `screen-saver` always-on-top level**, plus
+  `setVisibleOnAllWorkspaces`; the default `floating` level loses to too many
+  things.
+
+Still only exercised by a human on macOS: dragging, wheel-resize, hit-region
+click-through, and tray interaction. CI asserts the flags, not the feel.
 
 ## Licensing
 
