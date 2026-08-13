@@ -12,7 +12,8 @@
     "build": "electron-vite build",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "test": "vitest run",
-    "assets": "python3 tools/pack-sprites.py characters/dott"
+    "assets": "python3 tools/pack-sprites.py characters/dott",
+    "electron:binary": "node node_modules/electron/install.js"
   },
   "dependencies": {
     "uiohook-napi": "^1.5.5",

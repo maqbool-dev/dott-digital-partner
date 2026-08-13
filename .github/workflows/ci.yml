@@ -33,6 +33,14 @@ jobs:
 
       - run: npm ci
 
+      # npm now declines to run dependency install scripts by default, so
+      # Electron's postinstall never fetches its binary and `electron-vite
+      # preview` dies with "Electron uninstall". Fetching it explicitly is
+      # better than blanket-approving every package's install scripts: this is
+      # one known download, named in the diff, rather than a standing grant.
+      - name: Fetch Electron binary
+        run: npm run electron:binary
+
       - name: Typecheck
         run: npm run typecheck
 
