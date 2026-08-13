@@ -102,6 +102,15 @@ app.whenReady().then(() => {
     if (outDir && overlay) void runSelfTest(overlay, outDir)
   })
 
+  if (process.env.DOTT_SELFTEST) {
+    // Without this, a window that never becomes ready hangs CI until the job
+    // timeout rather than failing with a usable message.
+    setTimeout(() => {
+      console.error('[selftest] timed out waiting for the overlay')
+      app.exit(1)
+    }, 60_000)
+  }
+
   ipcMain.handle('dott:boot', () => bootPayload())
 
   ipcMain.on('dott:set-interactive', (_e, interactive: boolean) => {

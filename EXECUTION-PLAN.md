@@ -234,12 +234,33 @@ Since this project is explicitly a DevOps practice surface (G4), the pipeline is
 
 The PRD's four open questions do not block starting. Q1 is the only one that changes engineering:
 
-1. **Personal / friends / public?** Personal-only means signing is optional and M4 shrinks a lot. Public means signing, notarization and a privacy policy are all mandatory. **Assumption until told otherwise: build as if public** — it costs little at M0–M3 and avoids a painful retrofit.
+1. ~~**Personal / friends / public?**~~ **ANSWERED (Aug 13): public, open-source on GitHub.** The build-as-if-public assumption was correct, so nothing needs retrofitting. Consequences now binding rather than optional:
+   - Code signing and notarization move from "nice to have" to **required** — an unsigned public download containing a keyboard hook is a non-starter. Start the Apple Developer and Azure Trusted Signing accounts now (§7).
+   - A **licensing split** is needed before the repo goes public: the code and the character art should not share a licence. See §10.
+   - The privacy story for M2 becomes public-facing documentation, not a personal note. Strangers will read the keyboard-hook code specifically to check it; the `utilityProcess` design (§4.2) is what makes that check take thirty seconds.
+   - §11's original-character requirement is now load-bearing rather than precautionary.
 2. Moddable character packs vs curated? — affects manifest validation strictness only. Decide at M4.
 3. Monetization? — no engineering impact at v1.
 4. Show/hide hotkey? — **proposed default `Cmd/Ctrl+Shift+D`** ("D for DOTT"), user-rebindable in settings.
 
 ---
+
+## 10. Licensing — decide before the repo goes public
+
+This is the one open decision that actually blocks publishing, and it needs a human call rather than a default.
+
+**The code and the character art should not share a licence.** They are different assets with different risks:
+
+- **The code** is a desktop-pet engine. Permissive licensing (MIT/Apache-2.0) costs nothing and is what makes an open-source project worth publishing — people can learn from the overlay and manifest work, which is the genuinely reusable part.
+- **The art is Dott himself** — a commissioned, original character and the project's actual identity. Under MIT, anyone could ship "Dott" in their own product, sell character packs of him, or use him as branding. Once published under a permissive licence that grant is irrevocable.
+
+**Recommendation:** MIT (or Apache-2.0, which adds an explicit patent grant) for everything in `src/` and `tools/`, and a separate, more restrictive licence for `characters/` — CC BY-NC-ND 4.0 is the usual fit, or plain "all rights reserved" if you want to keep every option open. State the split in `README.md` and put a `characters/LICENSE` next to the art so it travels with the files.
+
+Note that GitHub's licence picker assumes one licence for the whole repo, so the split has to be written out explicitly or it will be misread.
+
+**Until this is decided, no `LICENSE` file should be added.** A public repo with no licence defaults to all-rights-reserved, which is the safe state — it can always be loosened later, never tightened.
+
+Worth a quick read of the original commission terms too, to confirm the art is yours to license rather than licensed to you.
 
 ## 9. Immediate next actions
 

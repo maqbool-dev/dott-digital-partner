@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# A second push to the same PR should cancel the first; these are GUI runs and
+# there is no value in finishing a superseded one.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # The whole point of the matrix. Everything risky about this project is
+        # OS window behaviour, which cannot be verified from one machine.
+        os: [macos-latest, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      # Launches the real app, drives it through every animation state, and
+      # records the window flags that each OS actually applied. This is what
+      # catches "focusable:false silently breaks input on Windows" — a class of
+      # bug no unit test can see.
+      - name: Overlay smoke test
+        shell: bash
+        env:
+          DOTT_SELFTEST: ${{ github.workspace }}/selftest-out
+        run: npm run preview
+
+      - name: Check smoke test results
+        shell: bash
+        run: |
+          report="selftest-out/report.json"
+          test -f "$report" || { echo "::error::self-test produced no report"; exit 1; }
+          node -e '
+            const r = require("./selftest-out/report.json");
+            const fail = [];
+            if (!r.window.isAlwaysOnTop) fail.push("window is not always-on-top");
+            if (r.window.isResizable) fail.push("window is natively resizable (breaks transparency on Windows)");
+            if (!r.window.isVisible) fail.push("window is not visible");
+            for (const [state, c] of Object.entries(r.captures)) {
+              // 0 means nothing painted; ~1 means the window is not transparent.
+              if (c.opaqueCoverage <= 0.02) fail.push(`${state}: nothing rendered`);
+              if (c.opaqueCoverage >= 0.98) fail.push(`${state}: window is not transparent`);
+            }
+            if (fail.length) { console.error("::error::" + fail.join("; ")); process.exit(1); }
+            console.log(`OK — ${Object.keys(r.captures).length} states, ${r.memory.totalWorkingSetMB}MB`);
+          '
+
+      - name: Upload captures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: selftest-${{ matrix.os }}
+          path: selftest-out/
+          if-no-files-found: warn

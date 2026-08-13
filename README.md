@@ -6,7 +6,8 @@ Cross-platform (macOS + Windows), built on Electron.
 See [EXECUTION-PLAN.md](EXECUTION-PLAN.md) for the full roadmap and
 [PRD-Desktop-Companion-App.md](../PRD-Desktop-Companion-App.md) for requirements.
 
-Status: **M1 (MVP) — overlay engine complete on macOS.**
+Status: **M1 (MVP) — overlay engine complete on macOS.** Default size is 170px tall;
+change it from the menu-bar icon or with `Cmd/Ctrl + scroll`.
 
 ## Quick start
 
@@ -61,12 +62,16 @@ animation. Drag bypasses dwell, since direct manipulation must feel immediate.
 
 ## Asset pipeline
 
-Renders arrive as stills with a studio backdrop. Two stages:
+Renders arrive as stills, sometimes with a studio backdrop and sometimes
+already cut out. Two stages:
 
 1. **`tools/cutout.py`** — one-time art prep, run manually when new renders
-   land. Border-seeded flood fill removes the backdrop. Frames belonging to one
-   state are cropped to a **shared** canvas; cropping each to its own bounding
-   box is what makes a sprite jitter as it cycles.
+   land. Border-seeded flood fill removes the backdrop, or `--keep-alpha`
+   trusts the source's own alpha for art cut out by an external tool. Either
+   way, frames belonging to one state are cropped to a **shared** canvas;
+   cropping each to its own bounding box is what makes a sprite jitter as it
+   cycles, and it bites just as hard with externally-supplied cutouts, since
+   each file may have been exported with different margins.
 2. **`tools/pack-sprites.py`** — the build step. Normalises every frame from
    every state onto one global canvas, bottom-centre anchored, packs per-state
    atlases, de-duplicates frames used more than once in a sequence, computes
@@ -111,6 +116,16 @@ Specific things to check there:
 - Transparent windows can't be natively resized on Windows; resizing already
   goes through `setBounds()` on both platforms to keep one code path.
 - Tray icon rendering and the `screen-saver` always-on-top level.
+
+## Licensing
+
+**Not yet licensed** — a public repo with no `LICENSE` is all-rights-reserved,
+which is the deliberate safe default until the split is decided.
+
+The intent is two licences, because the code and the character are different
+things: something permissive for `src/` and `tools/`, and something more
+restrictive for `characters/` so Dott's likeness isn't given away irrevocably.
+See [EXECUTION-PLAN.md](EXECUTION-PLAN.md) §10.
 
 ## Not yet implemented
 

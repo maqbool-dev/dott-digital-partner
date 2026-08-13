@@ -22,8 +22,14 @@ export const PositionSchema = z.object({
 export const ConfigSchema = z.object({
   version: z.literal(1).default(1),
   characterName: z.string().default('dott'),
-  /** Window height in DIP. Width follows from the character's aspect ratio. */
-  size: z.number().min(64).max(512).default(240),
+  /**
+   * Window height in DIP. Width follows from the character's aspect ratio.
+   *
+   * 170 is deliberately modest: this thing sits on top of everything, all day.
+   * Ambient presence is the goal, not a mascot that competes with the work.
+   * Users who want more can scale up to 512 via ctrl+scroll or the tray.
+   */
+  size: z.number().min(64).max(512).default(170),
   position: PositionSchema.nullable().default(null),
   /** Every context integration is opt-in and off by default (FR-13). */
   integrations: z

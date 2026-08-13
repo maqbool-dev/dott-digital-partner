@@ -121,13 +121,24 @@ def _union(a, b):
     return (min(a[0], b[0]), min(a[1], b[1]), max(a[2], b[2]), max(a[3], b[3]))
 
 
-def cutout_group(pairs, tol=5, feather=0.8, pad=6, min_frac=0.004):
-    """pairs: list of (src_path, out_path). All outputs share one canvas."""
+def cutout_group(pairs, tol=5, feather=0.8, pad=6, min_frac=0.004, keep_alpha=False):
+    """
+    pairs: list of (src_path, out_path). All outputs share one canvas.
+
+    keep_alpha=True skips the flood fill and trusts the source's own alpha,
+    for art that arrived already cut out by an external tool. The group-crop
+    still matters in that case -- arguably more so, since each file may have
+    been exported with different margins, and per-file cropping is what makes a
+    sprite jitter as it cycles.
+    """
     frames = []
     box = None
     for src, out in pairs:
-        im = Image.open(src).convert("RGB")
-        alpha = compute_alpha(im, tol=tol, min_frac=min_frac)
+        im = Image.open(src).convert("RGBA")
+        if keep_alpha:
+            alpha = im.getchannel("A")
+        else:
+            alpha = compute_alpha(im.convert("RGB"), tol=tol, min_frac=min_frac)
         bb = alpha.point(lambda v: 255 if v > 8 else 0).getbbox()
         box = _union(box, bb)
         frames.append((src, out, im, alpha))
@@ -146,9 +157,11 @@ def cutout_group(pairs, tol=5, feather=0.8, pad=6, min_frac=0.004):
     box = (max(0, l - pad), max(0, t - pad), min(W, r + pad), min(H, b + pad))
 
     for src, out, im, alpha in frames:
-        if feather:
+        # Externally-cut art is already anti-aliased at the edge; blurring it
+        # again just makes the silhouette mushy.
+        if feather and not keep_alpha:
             alpha = alpha.filter(ImageFilter.GaussianBlur(feather))
-        rgba = im.convert("RGBA")
+        rgba = im.copy()
         rgba.putalpha(alpha)
         rgba = rgba.crop(box)
         rgba.save(out)
@@ -160,9 +173,12 @@ if __name__ == "__main__":
     opts = {}
     rest = []
     group = False
+    keep_alpha = False
     for a in sys.argv[1:]:
         if a == "--group":
             group = True
+        elif a == "--keep-alpha":
+            keep_alpha = True
         elif a.startswith("--"):
             k, _, v = a[2:].partition("=")
             opts[k] = float(v) if v else True
@@ -173,6 +189,7 @@ if __name__ == "__main__":
         tol=opts.get("tol", 5),
         min_frac=opts.get("minfrac", 0.004),
         pad=int(opts.get("pad", 6)),
+        keep_alpha=keep_alpha,
     )
 
     if group:

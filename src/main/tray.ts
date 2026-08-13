@@ -15,10 +15,11 @@ export interface TrayHandlers {
 }
 
 const SIZE_PRESETS: ReadonlyArray<[string, number]> = [
-  ['Small (120)', 120],
-  ['Medium (240)', 240],
-  ['Large (360)', 360],
-  ['Huge (480)', 480],
+  ['Tiny (110)', 110],
+  ['Small (140)', 140],
+  ['Medium (170)', 170],
+  ['Large (240)', 240],
+  ['Huge (340)', 340],
 ]
 
 function trayIcon(): Electron.NativeImage {
