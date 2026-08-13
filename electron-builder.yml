@@ -1,0 +1,66 @@
+appId: dev.azm.dott
+productName: Dott
+copyright: © 2026 Maqbool Ahmed
+
+directories:
+  buildResources: build
+  output: release
+
+# Everything the app needs at runtime, and nothing else. Source art
+# (characters/*/src, ~4MB of raw renders) is deliberately excluded -- the app
+# only ever reads the packed atlases.
+files:
+  - out/**
+  - build/tray*.png
+  - package.json
+
+# Served through the dott-asset:// scheme from process.resourcesPath, so these
+# must sit outside the asar as real files on disk.
+extraResources:
+  - from: characters
+    to: characters
+    filter:
+      - '**/*'
+      - '!**/src/**'
+
+# uiohook-napi loads a .node binding at runtime; native code cannot be loaded
+# from inside an asar archive.
+asarUnpack:
+  - '**/*.node'
+
+mac:
+  category: public.app-category.productivity
+  icon: build/icon.png
+  target:
+    - target: dmg
+      arch: [arm64, x64]
+  # Tray-only app: no Dock icon, no app switcher entry. app.dock.hide() also
+  # does this at runtime, but declaring it here avoids a visible Dock flash
+  # during launch.
+  extendInfo:
+    LSUIElement: 1
+  # Required once signing is set up (M4). Harmless before then.
+  hardenedRuntime: true
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+
+dmg:
+  artifactName: ${productName}-${version}-${arch}.dmg
+
+win:
+  icon: build/icon.png
+  target:
+    - target: nsis
+      arch: [x64, arm64]
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  artifactName: ${productName}-${version}-${arch}-setup.exe
+
+# Auto-update feed (M4). Publishing is opt-in via `--publish`, so a normal
+# local build never uploads anything.
+publish:
+  provider: github
+  owner: maqbool-dev
+  repo: dott-digital-partner

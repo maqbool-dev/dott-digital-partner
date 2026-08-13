@@ -13,7 +13,10 @@
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "test": "vitest run",
     "assets": "python3 tools/pack-sprites.py characters/dott",
-    "electron:binary": "node node_modules/electron/install.js"
+    "electron:binary": "node node_modules/electron/install.js",
+    "dist": "npm run build && electron-builder --publish never",
+    "dist:mac": "npm run build && electron-builder --mac --publish never",
+    "dist:win": "npm run build && electron-builder --win --publish never"
   },
   "dependencies": {
     "uiohook-napi": "^1.5.5",
@@ -22,6 +25,7 @@
   "devDependencies": {
     "@types/node": "^26.2.0",
     "electron": "^43.4.0",
+    "electron-builder": "^26.15.3",
     "electron-vite": "^5.0.0",
     "typescript": "^7.0.2",
     "vite": "^7.3.6",

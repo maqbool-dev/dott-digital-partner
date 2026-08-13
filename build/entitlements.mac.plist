@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!-- Chromium's JavaScript engine requires both of these under the hardened
+       runtime. Every Electron app needs them; they are not Dott-specific. -->
+  <key>com.apple.security.cs.allow-jit</key>
+  <true/>
+  <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+  <true/>
+
+  <!-- The uiohook native binding is signed separately from the app during
+       packaging, so strict library validation would refuse to load it. -->
+  <key>com.apple.security.cs.disable-library-validation</key>
+  <true/>
+
+  <!-- Outbound HTTPS for the Spotify Web API. There is no inbound server: the
+       OAuth loopback listener binds 127.0.0.1 and closes after one request. -->
+  <key>com.apple.security.network.client</key>
+  <true/>
+</dict>
+</plist>

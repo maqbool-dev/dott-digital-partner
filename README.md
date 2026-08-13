@@ -9,16 +9,56 @@ the architecture decisions, measurements and trade-offs behind it.
 Status: **M3 — overlay engine, typing cadence, and Spotify reactivity.** Default size is 170px tall;
 change it from the menu-bar icon or with `Cmd/Ctrl + scroll`.
 
-## Quick start
+## Run it from source
 
 ```bash
-npm install && npm run dev
+npm install
+npm run dev
+```
+
+If the app fails to launch with `Error: Electron uninstall`, npm declined to run
+Electron's install script. Fetch the binary explicitly, once:
+
+```bash
+npm run electron:binary
 ```
 
 Dott appears bottom-right. Drag him anywhere, `Cmd/Ctrl + scroll` over him to
 resize, and use the menu-bar icon for size presets, character selection, and a
 **Preview state** submenu that forces any animation for art review.
 `Cmd/Ctrl+Shift+D` hides and shows him.
+
+## Build a real app
+
+```bash
+npm run dist:mac     # -> release/Dott-0.1.0-arm64.dmg
+npm run dist:win     # -> release/Dott-0.1.0-x64-setup.exe
+npm run dist         # both targets for the current platform
+```
+
+Each platform's installer must be built on that platform — a macOS machine
+cannot produce a signed Windows build, and vice versa. That's what the CI
+matrix is for.
+
+Verified: the packaged macOS app renders all five states, keeps the correct
+window flags, and idles at **97.8MB** — 8MB above the dev-mode figure, and
+still well inside the 150MB target. `dmg` is 118MB; the `.app` is 284MB
+unpacked, essentially all Electron framework.
+
+### Two gotchas
+
+**A space in the project path breaks native rebuilds.** `@electron/rebuild`
+fails with *"Attempting to build a module with a space in the path"*. Harmless
+here — `uiohook-napi` ships N-API prebuilds, so nothing needs compiling and the
+build completes — but it will bite anyone who adds a dependency that does need
+compiling. Clone into a path with no spaces.
+
+**Unsigned builds are for local use only.** `dist:mac` produces an unsigned,
+un-notarized app: macOS Gatekeeper will refuse to open it normally
+(right-click → Open, once, to bypass). Windows will show a SmartScreen warning.
+Signing is M4 — see [EXECUTION-PLAN.md](EXECUTION-PLAN.md) §7. It matters more
+than usual here, because an unsigned binary containing a keyboard hook is close
+to the textbook heuristic for a keylogger.
 
 ## Scripts
 
