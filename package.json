@@ -1,5 +1,6 @@
 {
   "name": "dott",
+  "productName": "Dott",
   "version": "0.1.0",
   "description": "Dott — an always-on animated desktop companion that reacts to what you're doing",
   "main": "./out/main/index.js",

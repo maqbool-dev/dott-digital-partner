@@ -66,19 +66,24 @@ Both integrations need a value hand-edited into `config.json`. Easiest route:
 **menu-bar icon → Edit config file…**, which opens whichever file the running
 instance actually reads.
 
-The path depends on how Dott was launched, because Electron derives it from the
-app name:
+| Platform | Path |
+|---|---|
+| macOS | `~/Library/Application Support/Dott/config.json` |
+| Windows | `%APPDATA%\Dott\config.json` |
 
-| How you launched it | macOS | Windows |
-|---|---|---|
-| Packaged app | `~/Library/Application Support/Dott/config.json` | `%APPDATA%\Dott\config.json` |
-| `npm run dev` / `preview` | `~/Library/Application Support/dott/config.json` | `%APPDATA%\dott\config.json` |
-
-Note the capitalisation — `Dott` vs `dott`. Editing one has no effect on the
-other, which is an easy hour to lose.
+The packaged app and `npm run dev` share one file. That is what `productName`
+in `package.json` is for: Electron derives `userData` from the app name, and
+without it dev would resolve to `dott` (the package name) while the packaged
+build resolved to `Dott` (the bundle name) — identical on the default
+case-insensitive macOS and Windows filesystems, but two separate configs on a
+case-sensitive volume.
 
 The file is only written once something changes, so a fresh install may not have
 one yet; "Edit config file…" creates it with defaults first.
+
+**Changes made by hand need an app restart.** Config is read once at startup and
+cached, so editing the file under a running Dott has no effect until you quit
+and relaunch.
 
 ## Scripts
 
