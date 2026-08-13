@@ -4,6 +4,7 @@ import { ANIMATION_STATES, type AnimationState } from '../shared/states'
 import { loadConfig, saveConfig } from './config'
 import { listCharacters } from './characters'
 import type { TypingStatus } from './sources/typing'
+import type { SpotifyStatus } from './sources/spotify'
 
 export interface TrayHandlers {
   onSize: (size: number) => void
@@ -12,9 +13,12 @@ export interface TrayHandlers {
   onCharacter: (name: string) => void
   onToggleTyping: (on: boolean) => void | Promise<void>
   onOpenTypingPermission: () => void
+  onToggleSpotify: (on: boolean) => void | Promise<void>
+  onSpotifySignOut: () => void
   currentState: () => AnimationState
   forcedState: () => AnimationState | null
   typingStatus: () => TypingStatus
+  spotifyStatus: () => SpotifyStatus
   isVisible: () => boolean
 }
 
@@ -29,6 +33,15 @@ const TYPING_STATUS_SUFFIX: Record<TypingStatus, string> = {
   running: '',
   blocked: ' — needs permission',
   failed: ' — unavailable',
+}
+
+const SPOTIFY_STATUS_SUFFIX: Record<SpotifyStatus, string> = {
+  off: '',
+  connecting: ' (waiting for browser…)',
+  connected: '',
+  unconfigured: ' — needs setup',
+  unauthorized: ' — sign in required',
+  error: ' — offline',
 }
 
 const SIZE_PRESETS: ReadonlyArray<[string, number]> = [
@@ -136,12 +149,25 @@ export function createTray(h: TrayHandlers): Tray {
             ]
           : []),
         {
-          label: 'Spotify reactivity',
+          label: `Spotify reactivity${SPOTIFY_STATUS_SUFFIX[h.spotifyStatus()]}`,
           type: 'checkbox',
           checked: cfg.integrations.spotify,
-          enabled: false, // M3
-          click: () => {},
+          click: (item) => {
+            void h.onToggleSpotify(item.checked)
+            rebuild()
+          },
         },
+        ...(h.spotifyStatus() === 'connected' || h.spotifyStatus() === 'unauthorized'
+          ? [
+              {
+                label: 'Sign out of Spotify',
+                click: () => {
+                  h.onSpotifySignOut()
+                  rebuild()
+                },
+              },
+            ]
+          : []),
         { type: 'separator' },
         {
           label: 'Launch at login',

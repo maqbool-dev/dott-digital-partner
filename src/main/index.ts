@@ -11,6 +11,7 @@ import {
 import { clampSize, loadConfig, saveConfig } from './config'
 import { OverlayWindow, preloadFile } from './overlay-window'
 import { runSelfTest } from './selftest'
+import { SpotifySource } from './sources/spotify'
 import { TypingSource } from './sources/typing'
 import { createTray } from './tray'
 import type { BootPayload } from '../preload/index'
@@ -30,6 +31,14 @@ let manifest = null as ReturnType<typeof loadManifest> | null
 let forced: AnimationState | null = null
 const machine = new StateMachine()
 const typing = new TypingSource(() => tray?.rebuild())
+const spotify = new SpotifySource(
+  () => {
+    // Playback changes are pushed, unlike cadence which is sampled.
+    machine.update({ music: spotify.isPlaying() }, Date.now())
+    pushState()
+  },
+  () => loadConfig().spotify,
+)
 
 function pushState(): void {
   if (!overlay || overlay.win.isDestroyed()) return
@@ -102,7 +111,10 @@ app.whenReady().then(() => {
     overlay?.reveal()
     const outDir = process.env.DOTT_SELFTEST
     if (outDir && overlay) {
-      void runSelfTest(overlay, outDir, { typingStatus: () => typing.getStatus() })
+      void runSelfTest(overlay, outDir, {
+        typingStatus: () => typing.getStatus(),
+        spotifyStatus: () => spotify.getStatus(),
+      })
     }
   })
 
@@ -166,9 +178,28 @@ app.whenReady().then(() => {
       tray?.rebuild()
     },
     onOpenTypingPermission: () => void typing.openPermissionSettings(),
+    onToggleSpotify: async (on) => {
+      if (on) {
+        const started = await spotify.enable(true)
+        saveConfig({ integrations: { ...loadConfig().integrations, spotify: started } })
+      } else {
+        spotify.disable()
+        saveConfig({ integrations: { ...loadConfig().integrations, spotify: false } })
+        machine.update({ music: false }, Date.now())
+        pushState()
+      }
+      tray?.rebuild()
+    },
+    onSpotifySignOut: () => {
+      spotify.signOut()
+      saveConfig({ integrations: { ...loadConfig().integrations, spotify: false } })
+      machine.update({ music: false }, Date.now())
+      pushState()
+    },
     currentState: () => machine.state,
     forcedState: () => forced,
     typingStatus: () => typing.getStatus(),
+    spotifyStatus: () => spotify.getStatus(),
     isVisible: () => overlay?.win.isVisible() ?? false,
   }) as Electron.Tray & { rebuild: () => void }
 
@@ -177,6 +208,7 @@ app.whenReady().then(() => {
   // Previously granted, so start without prompting. If the OS grant was
   // revoked since, the hook reports it and the tray shows "needs permission".
   if (cfg.integrations.typing) void typing.enable(false)
+  if (cfg.integrations.spotify) void spotify.enable(false)
 
   // Dwell-blocked transitions still need to land once their window expires,
   // so the machine is ticked rather than only being poked by signal changes.
@@ -194,6 +226,7 @@ app.whenReady().then(() => {
   app.on('will-quit', () => {
     clearInterval(ticker)
     typing.disable()
+    spotify.disable()
     globalShortcut.unregisterAll()
   })
 })

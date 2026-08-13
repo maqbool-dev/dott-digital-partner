@@ -6,7 +6,7 @@ Cross-platform (macOS + Windows), built on Electron.
 See [EXECUTION-PLAN.md](EXECUTION-PLAN.md) for the full roadmap and
 [PRD-Desktop-Companion-App.md](../PRD-Desktop-Companion-App.md) for requirements.
 
-Status: **M2 — overlay engine + typing cadence, verified on macOS.** Default size is 170px tall;
+Status: **M3 — overlay engine, typing cadence, and Spotify reactivity.** Default size is 170px tall;
 change it from the menu-bar icon or with `Cmd/Ctrl + scroll`.
 
 ## Quick start
@@ -27,7 +27,7 @@ resize, and use the menu-bar icon for size presets, character selection, and a
 | `npm run dev` | Run with HMR |
 | `npm run build` | Production build into `out/` |
 | `npm run preview` | Run the production build |
-| `npm test` | Unit tests (state machine, manifest contract) |
+| `npm test` | Unit tests (state machine, manifest, cadence, PKCE, Spotify) |
 | `npm run typecheck` | Typecheck main + renderer |
 | `npm run assets` | Repack sprite atlases and regenerate `manifest.json` |
 
@@ -178,8 +178,65 @@ hook_run [1405]: Accessibility API is disabled!
 [selftest] ... 5 states captured, 4 processes    <- app unaffected
 ```
 
-## Not yet implemented
+## Spotify reactivity (M3)
 
-M3 Spotify reactivity is a disabled tray toggle — visible so the integration is
-discoverable, off by default per FR-13. There is no settings window yet; the
-tray covers everything so far.
+Dott puts headphones on while something is playing. **Off by default.**
+
+### One-time setup
+
+Spotify requires each installation to use its own app credentials — there is no
+shared key an open-source project can ship, so this can't be avoided:
+
+1. Create an app at [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard)
+2. Add this exact redirect URI: `http://127.0.0.1:8888/callback`
+   (the literal `127.0.0.1` — Spotify rejects `localhost`)
+3. Put the Client ID into `spotify.clientId` in `config.json`
+   (`~/Library/Application Support/dott/` on macOS,
+   `%APPDATA%\dott\` on Windows)
+4. Tick **Spotify reactivity** in the menu bar
+
+The tray shows `— needs setup` until step 3 is done, and offers to open the
+dashboard for you.
+
+### What it can and can't do
+
+The only scope requested is `user-read-playback-state`. Dott can see whether
+something is playing. It cannot control playback, read your library, or see
+anything about your account — and there's a test asserting the scope list stays
+read-only.
+
+Auth is **Authorization Code + PKCE**, so there is no client secret. That's
+required here twice over: a desktop app can't keep a secret (anyone can unpack
+the binary), and this repo is public, so a secret in the source would be a
+secret in every clone. The client ID is not a secret and is fine in config.
+
+The refresh token is encrypted through the OS keystore — Keychain on macOS,
+DPAPI on Windows — via Electron's `safeStorage`. If a platform can't encrypt,
+Dott stores **nothing** and asks you to sign in again next launch, rather than
+writing a long-lived token to a plaintext file.
+
+### Polling
+
+The Web API has no push channel, so this polls: **4s while playing, 30s while
+stopped**, with exponential backoff to 60s on failures and `Retry-After`
+honoured on a 429. Adaptive rather than fixed because a constant 4s poll would
+be the largest idle cost in the app — 900 needless requests an hour while
+nothing is playing.
+
+Every failure path ends at `playing = false`, so losing the network makes Dott
+go idle rather than misbehave.
+
+## Verification status
+
+| Area | State |
+|---|---|
+| Overlay, drag, resize, persistence, tray, hotkey | Verified on macOS |
+| Windows behaviour | **Unverified** — first CI run will tell |
+| Typing: hook spawn, failure handling, cadence maths | Verified |
+| Typing: real keystrokes → animation | **Unverified** — needs Input Monitoring granted |
+| Spotify: PKCE, response parsing, poll scheduling | Verified (39 unit tests) |
+| Spotify: live OAuth + polling | **Unverified** — needs your client ID |
+
+The unverified rows need either a Windows machine, an OS permission grant, or a
+Spotify account — none of which can be faked. They are listed rather than
+quietly assumed to work.

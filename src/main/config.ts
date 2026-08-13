@@ -38,6 +38,20 @@ export const ConfigSchema = z.object({
       spotify: z.boolean().default(false),
     })
     .default({ typing: false, spotify: false }),
+  /**
+   * Spotify app credentials. The client ID is not a secret — PKCE exists so a
+   * public client doesn't need one — so it belongs in plain config. The
+   * refresh token does not: that lives OS-encrypted, see secure-store.ts.
+   *
+   * The port is configurable because Spotify demands an exact-match redirect
+   * URI, so a port collision can only be resolved by changing both sides.
+   */
+  spotify: z
+    .object({
+      clientId: z.string().default(''),
+      port: z.number().int().min(1024).max(65535).default(8888),
+    })
+    .default({ clientId: '', port: 8888 }),
   hotkey: z.string().default('CommandOrControl+Shift+D'),
   launchAtLogin: z.boolean().default(false),
 })

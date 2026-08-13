@@ -31,6 +31,7 @@ function sleep(ms: number): Promise<void> {
 export interface SelfTestProbes {
   /** Records whether the input hook came up, so CI captures it per-OS. */
   typingStatus?: () => string
+  spotifyStatus?: () => string
 }
 
 export async function runSelfTest(
@@ -99,6 +100,7 @@ export async function runSelfTest(
       // is not a failure: it proves the hook reported cleanly instead of
       // taking the app down with it.
       typing: probes.typingStatus?.() ?? 'off',
+      spotify: probes.spotifyStatus?.() ?? 'off',
     },
     memory: {
       processCount: metrics.length,
