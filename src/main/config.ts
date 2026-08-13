@@ -1,4 +1,4 @@
-import { app } from 'electron'
+import { app, shell } from 'electron'
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { z } from 'zod'
@@ -64,8 +64,29 @@ export const SIZE_MAX = 512
 
 let cached: Config | null = null
 
-function configPath(): string {
+/**
+ * Location of the config file.
+ *
+ * Note that `userData` is derived from the app name, so a packaged build and a
+ * `npm run dev` build resolve to *different* directories ("Dott" vs "dott" on
+ * macOS). That is standard Electron behaviour, but it surprises people who edit
+ * one file and see no effect in the other — hence `revealConfigFile()`, which
+ * always opens whichever one the running instance actually reads.
+ */
+export function configPath(): string {
   return path.join(app.getPath('userData'), 'config.json')
+}
+
+/**
+ * Write the file out if it doesn't exist yet, then hand it to the OS editor.
+ *
+ * Config is otherwise only written when something changes, so a fresh install
+ * has no file at all — and telling someone to edit a file that isn't there is
+ * a dead end.
+ */
+export function revealConfigFile(): Promise<string> {
+  if (!existsSync(configPath())) saveConfig({})
+  return shell.openPath(configPath())
 }
 
 export function loadConfig(): Config {

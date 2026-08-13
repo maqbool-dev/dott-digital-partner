@@ -1,6 +1,7 @@
 import { dialog, shell } from 'electron'
 import { createServer, type Server } from 'node:http'
 import { nextPollDelay, parsePlayback, POLL } from '../../shared/spotify'
+import { configPath, revealConfigFile } from '../config'
 import { clearSecret, canStoreSecrets, loadSecret, saveSecret } from '../secure-store'
 import {
   buildAuthUrl,
@@ -375,8 +376,9 @@ export class SpotifySource {
             message: `Dott needs port ${port} to complete the Spotify sign-in.`,
             detail:
               `Something else on this machine is already using 127.0.0.1:${port}.\n\n` +
-              `Change "spotify.port" in Dott's config.json, then register the new ` +
-              `redirect URI in your Spotify app settings — they have to match exactly.`,
+              `Change "spotify.port" in:\n     ${configPath()}\n\n` +
+              `then register the matching redirect URI in your Spotify app ` +
+              `settings — the two have to be identical.`,
           })
         }
         reject(e)
@@ -423,9 +425,9 @@ export class SpotifySource {
     const { port } = this.getSettings()
     const { response } = await dialog.showMessageBox({
       type: 'info',
-      buttons: ['Open Spotify dashboard', 'Not now'],
+      buttons: ['Open Spotify dashboard', 'Open config file', 'Not now'],
       defaultId: 0,
-      cancelId: 1,
+      cancelId: 2,
       title: 'Connect Dott to Spotify',
       message: 'Dott needs a free Spotify app of your own before it can see what you play.',
       detail:
@@ -433,12 +435,15 @@ export class SpotifySource {
         'is no shared key an open-source project can ship.\n\n' +
         '1. Create an app at developer.spotify.com/dashboard\n' +
         `2. Add this exact redirect URI:\n     ${redirectUri(port)}\n` +
-        '3. Copy the Client ID into "spotify.clientId" in Dott\'s config.json\n' +
+        // Naming the file without naming its path sends people hunting, and the
+        // path differs between a packaged build and `npm run dev`.
+        `3. Set "spotify.clientId" to the Client ID in:\n     ${configPath()}\n` +
         '4. Turn this toggle on again\n\n' +
         'Dott asks only for permission to read what is playing. It cannot change ' +
         'playback, see your library, or read anything about your account.',
     })
     if (response === 0) void shell.openExternal(DASHBOARD_URL)
+    if (response === 1) void revealConfigFile()
   }
 
   private setStatus(next: SpotifyStatus): void {

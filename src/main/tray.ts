@@ -1,7 +1,7 @@
 import { app, Menu, Tray, nativeImage } from 'electron'
 import path from 'node:path'
 import { ANIMATION_STATES, type AnimationState } from '../shared/states'
-import { loadConfig, saveConfig } from './config'
+import { loadConfig, revealConfigFile, saveConfig } from './config'
 import { listCharacters } from './characters'
 import type { TypingStatus } from './sources/typing'
 import type { SpotifyStatus } from './sources/spotify'
@@ -178,6 +178,14 @@ export function createTray(h: TrayHandlers): Tray {
             app.setLoginItemSettings({ openAtLogin: item.checked })
             rebuild()
           },
+        },
+        { type: 'separator' },
+        {
+          // Both integrations need values hand-edited into config.json, and the
+          // path differs between a packaged build and `npm run dev`. Opening it
+          // from the running instance removes the guesswork entirely.
+          label: 'Edit config file…',
+          click: () => void revealConfigFile(),
         },
         { type: 'separator' },
         { label: 'Quit Dott', role: 'quit' },

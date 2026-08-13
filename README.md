@@ -60,6 +60,26 @@ Signing is M4 — see [EXECUTION-PLAN.md](EXECUTION-PLAN.md) §7. It matters mor
 than usual here, because an unsigned binary containing a keyboard hook is close
 to the textbook heuristic for a keylogger.
 
+## Where settings live
+
+Both integrations need a value hand-edited into `config.json`. Easiest route:
+**menu-bar icon → Edit config file…**, which opens whichever file the running
+instance actually reads.
+
+The path depends on how Dott was launched, because Electron derives it from the
+app name:
+
+| How you launched it | macOS | Windows |
+|---|---|---|
+| Packaged app | `~/Library/Application Support/Dott/config.json` | `%APPDATA%\Dott\config.json` |
+| `npm run dev` / `preview` | `~/Library/Application Support/dott/config.json` | `%APPDATA%\dott\config.json` |
+
+Note the capitalisation — `Dott` vs `dott`. Editing one has no effect on the
+other, which is an easy hour to lose.
+
+The file is only written once something changes, so a fresh install may not have
+one yet; "Edit config file…" creates it with defaults first.
+
 ## Scripts
 
 | Command | Purpose |
