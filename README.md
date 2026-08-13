@@ -108,7 +108,7 @@ composites nothing in between.
 
 ## Platform notes
 
-Verified on macOS. **Windows is unverified** — M0's Windows leg is outstanding.
+Verified on both macOS and Windows via the CI matrix.
 Specific things to check there:
 
 - `focusable: false`. Some Electron versions have treated this as "receives no
@@ -231,12 +231,29 @@ go idle rather than misbehave.
 | Area | State |
 |---|---|
 | Overlay, drag, resize, persistence, tray, hotkey | Verified on macOS |
-| Windows behaviour | **Unverified** — first CI run will tell |
+| Windows window flags + rendering | **Verified in CI** — see below |
 | Typing: hook spawn, failure handling, cadence maths | Verified |
 | Typing: real keystrokes → animation | **Unverified** — needs Input Monitoring granted |
 | Spotify: PKCE, response parsing, poll scheduling | Verified (39 unit tests) |
-| Spotify: live OAuth + polling | **Unverified** — needs your client ID |
+| Spotify: live OAuth + polling | **Unverified** — needs a client ID |
+| Animation actually advances frame to frame | **Not asserted by CI** — see gap below |
 
-The unverified rows need either a Windows machine, an OS permission grant, or a
-Spotify account — none of which can be faked. They are listed rather than
-quietly assumed to work.
+### Cross-platform parity
+
+The CI matrix runs the real app on both OSes. Both report identical window
+flags — `alwaysOnTop: true`, `resizable: false`, `focusable: false`,
+`hasShadow: false` — identical 188×170 bounds, and per-state opaque coverage
+matching to within 0.0003. The `focusable: false` concern about Windows
+swallowing input did not materialise.
+
+### Known gap
+
+Each state is captured once, which proves the sprite painted and the window is
+transparent — but not that a multi-frame animation is *advancing*. In one run,
+macOS produced byte-identical captures for `typing_calm` and `typing_fast`
+while Windows produced three distinct ones. Both states can legitimately land
+on the same source frame, so a single capture cannot tell a phase coincidence
+from a frozen animation.
+
+Closing this means capturing twice per state and asserting the two differ
+wherever `sequence.length > 1`.
