@@ -1,0 +1,93 @@
+{
+  "name": "dott",
+  "displayName": "Dott",
+  "author": "Maqbool Ahmed",
+  "version": 1,
+  "generated": true,
+  "canvas": {
+    "width": 775,
+    "height": 640
+  },
+  "anchor": "bottom-center",
+  "states": {
+    "idle": {
+      "atlas": "atlas/idle.png",
+      "frameCount": 1,
+      "sequence": [
+        0
+      ],
+      "fps": 1.0,
+      "motion": "breathe",
+      "hitBox": {
+        "x": 0.00129,
+        "y": 0.05781,
+        "w": 0.99226,
+        "h": 0.93437
+      }
+    },
+    "typing_calm": {
+      "atlas": "atlas/typing_calm.png",
+      "frameCount": 2,
+      "sequence": [
+        0,
+        1
+      ],
+      "fps": 6.0,
+      "motion": "none",
+      "hitBox": {
+        "x": 0.00129,
+        "y": 0.05781,
+        "w": 0.99226,
+        "h": 0.93437
+      }
+    },
+    "typing_fast": {
+      "atlas": "atlas/typing_fast.png",
+      "frameCount": 3,
+      "sequence": [
+        1,
+        2,
+        0,
+        2
+      ],
+      "fps": 14.0,
+      "motion": "shake",
+      "hitBox": {
+        "x": 0.00129,
+        "y": 0.05781,
+        "w": 0.99226,
+        "h": 0.93594
+      }
+    },
+    "music_reactive": {
+      "atlas": "atlas/music_reactive.png",
+      "frameCount": 1,
+      "sequence": [
+        0
+      ],
+      "fps": 1.0,
+      "motion": "bob",
+      "hitBox": {
+        "x": 0.16129,
+        "y": 0.1375,
+        "w": 0.67742,
+        "h": 0.85313
+      }
+    },
+    "dragged": {
+      "atlas": "atlas/dragged.png",
+      "frameCount": 1,
+      "sequence": [
+        0
+      ],
+      "fps": 1.0,
+      "motion": "none",
+      "hitBox": {
+        "x": 0.18839,
+        "y": 0.01094,
+        "w": 0.62323,
+        "h": 0.97969
+      }
+    }
+  }
+}

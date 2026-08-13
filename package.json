@@ -1,0 +1,28 @@
+{
+  "name": "dott",
+  "version": "0.1.0",
+  "description": "Dott — an always-on animated desktop companion that reacts to what you're doing",
+  "main": "./out/main/index.js",
+  "author": "Maqbool Ahmed",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "dev": "electron-vite dev",
+    "preview": "electron-vite preview",
+    "build": "electron-vite build",
+    "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
+    "test": "vitest run",
+    "assets": "python3 tools/pack-sprites.py characters/dott"
+  },
+  "dependencies": {
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "electron": "^43.4.0",
+    "electron-vite": "^5.0.0",
+    "typescript": "^7.0.2",
+    "vite": "^7.3.6",
+    "vitest": "^4.1.10"
+  }
+}

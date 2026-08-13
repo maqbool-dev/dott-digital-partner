@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <!-- The overlay loads only local atlases over the custom asset scheme and
+         runs no remote code, so lock the CSP down to exactly that. -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; img-src dott-asset: data:; style-src 'unsafe-inline'; script-src 'self'; connect-src 'self' ws://localhost:* http://localhost:*"
+    />
+    <title>Dott</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: transparent;
+        /* Nothing in the overlay is selectable or draggable as content. */
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-user-drag: none;
+        cursor: default;
+      }
+
+      #sprite {
+        position: absolute;
+        inset: 0;
+        background-repeat: no-repeat;
+        background-position: 0 0;
+        /* Frames are anchored bottom-centre on a shared canvas, so scaling from
+           the bottom keeps Dott's contact point planted. */
+        transform-origin: 50% 100%;
+        will-change: transform;
+        /* Crisp downscale of the 640px-tall atlas frames. */
+        image-rendering: auto;
+      }
+
+      #hit {
+        position: absolute;
+        /* Geometry comes from the manifest's per-state hitBox. */
+        cursor: grab;
+      }
+      #hit.dragging {
+        cursor: grabbing;
+      }
+
+      /* --- motion: transform-only, so these run on the compositor and cost
+             effectively no CPU even while the frame stepper is idle --- */
+      /* 1.8s is one complete breath. The player duty-cycles this class on and
+         off rather than leaving it running, so the duration must equal exactly
+         one cycle or the animation would be cut off mid-scale. */
+      #sprite[data-motion='breathe'] {
+        animation: breathe 1.8s ease-in-out;
+      }
+      #sprite[data-motion='bob'] {
+        animation: bob 0.52s ease-in-out infinite;
+      }
+      #sprite[data-motion='shake'] {
+        animation: shake 0.14s linear infinite;
+      }
+      #sprite[data-motion='none'] {
+        animation: none;
+      }
+
+      @keyframes breathe {
+        0%,
+        100% {
+          transform: scale(1, 1);
+        }
+        50% {
+          transform: scale(1.012, 0.988);
+        }
+      }
+      @keyframes bob {
+        0%,
+        100% {
+          transform: translateY(0) rotate(-1.1deg);
+        }
+        50% {
+          transform: translateY(-3.5%) rotate(1.1deg);
+        }
+      }
+      @keyframes shake {
+        0%,
+        100% {
+          transform: translate(0, 0);
+        }
+        25% {
+          transform: translate(-0.35%, 0.2%);
+        }
+        75% {
+          transform: translate(0.35%, -0.2%);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        #sprite {
+          animation: none !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="sprite" data-motion="none"></div>
+    <div id="hit"></div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

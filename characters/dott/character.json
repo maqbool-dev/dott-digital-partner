@@ -1,0 +1,50 @@
+{
+  "name": "dott",
+  "displayName": "Dott",
+  "author": "Maqbool Ahmed",
+  "targetCanvasHeight": 640,
+
+  "_comment": [
+    "AUTHORING input. The build (tools/pack-sprites.py) reads this and emits",
+    "manifest.json + atlas/*.png, which is what the app actually loads.",
+    "Never hand-edit manifest.json -- it is generated and will be overwritten.",
+    "",
+    "'frames' lists UNIQUE source files. 'sequence' indexes into that list, so a",
+    "ping-pong loop reuses a frame instead of duplicating it in the atlas.",
+    "'motion' adds a transform-driven flourish on top of frame cycling, which is",
+    "what gives single-frame states a pulse without needing more art."
+  ],
+
+  "states": {
+    "idle": {
+      "frames": ["src/press-rest.png"],
+      "sequence": [0],
+      "fps": 1,
+      "motion": "breathe"
+    },
+    "typing_calm": {
+      "frames": ["src/press-rest.png", "src/press-left.png"],
+      "sequence": [0, 1],
+      "fps": 6,
+      "motion": "none"
+    },
+    "typing_fast": {
+      "frames": ["src/press-rest.png", "src/press-left.png", "src/press-both.png"],
+      "sequence": [1, 2, 0, 2],
+      "fps": 14,
+      "motion": "shake"
+    },
+    "music_reactive": {
+      "frames": ["src/vibing.png"],
+      "sequence": [0],
+      "fps": 1,
+      "motion": "bob"
+    },
+    "dragged": {
+      "frames": ["src/standing.png"],
+      "sequence": [0],
+      "fps": 1,
+      "motion": "none"
+    }
+  }
+}
