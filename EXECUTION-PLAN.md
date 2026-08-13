@@ -4,22 +4,20 @@
 |---|---|
 | **Product** | DOTT (Digital Partner) — desktop companion platform |
 | **Character #1** | `dott` — original design (orange capsule, round glasses, antenna, grey hoodie) |
-| **Source PRD** | `PRD-Desktop-Companion-App.md` (working title "Buddy" → renamed **DOTT**) |
-| **Owner** | Maqbool Ahmed |
-| **Plan status** | v1.0 — ready to execute |
-| **Date** | August 12, 2026 |
+| **Plan status** | Live — M0–M3 complete |
+| **Started** | August 2026 |
+
+> Requirements come from a private PRD that isn't published with this repo, so
+> the `PRD §n` / `FR-n` / `G-n` references below won't resolve externally. The
+> reasoning is written to stand on its own regardless.
 
 ---
 
-## 0. What changed from the PRD
+## 0. Founding decisions
 
-Three decisions the PRD left open are now closed:
-
-1. **Name:** "Buddy" → **DOTT**. The app is the *platform*; `dott` is the first character in it. This distinction matters — it forces the character-manifest boundary (G3) from day one instead of retrofitting it at M4.
-2. **IP risk resolved.** PRD §11 flagged the Minion likeness as real legal exposure. The concept art supplied is an original design — orange/coral capsule body, round wire glasses, single bulb antenna, grey hoodie and gloves. Nothing derivative of Illumination's character. **§11's blocker is cleared**; keep the recommendation (original art only) as a standing rule for future character packs.
+1. **Name:** the app is the *platform*; `dott` is the first character in it. That distinction is what forces the character-manifest boundary from day one instead of retrofitting it at M4.
+2. **Original character art only.** The initial brief gestured at a well-known copyrighted character. The commissioned design is original — orange/coral capsule body, round wire glasses, single bulb antenna, grey hoodie and gloves — and "original art only" is a standing rule for any future character pack.
 3. **Framework: Electron for v1.** Reasoning in §2 below. Tauri stays a measured, gated fallback rather than an open question.
-
-Minor doc fix for the PRD: FR-8 and the Non-Goals both cite "Section 12 — Legal & IP", but Legal & IP is **Section 11** (12 is Milestones). Worth correcting so the cross-references don't rot.
 
 ---
 
@@ -51,7 +49,7 @@ The deciding line is row 2. `{forward: true}` is what makes precise hit-region c
 
 **Trade-off accepted:** memory. The PRD targets <150MB idle, which is tight for Electron. §5 describes the specific measures that make it reachable.
 
-**Tauri gate — not an open question, a threshold.** At the end of M1, measure idle RSS. If it exceeds **220MB**, spend one week on a Tauri spike; below that, stay on Electron and never revisit. Writing the number down now prevents this from becoming a recurring debate, and there is no Rust toolchain installed on this machine today, so a Tauri pivot has real setup cost attached.
+**Tauri gate — not an open question, a threshold.** At the end of M1, measure idle RSS. If it exceeds **220MB**, spend one week on a Tauri spike; below that, stay on Electron and never revisit. Writing the number down now prevents this from becoming a recurring debate, and a Tauri pivot carries real setup cost (a Rust toolchain this project otherwise never needs).
 
 > **GATE CLOSED — staying on Electron.** Measured on the M1 build (macOS 15, arm64, Electron 43, production, idle): **89.6MB** `phys_footprint` across 4 processes, against a 220MB threshold and a 150MB NFR target. Idle CPU **2.37% mean**, inside the 2–3% budget.
 >
@@ -65,52 +63,53 @@ The deciding line is row 2. `{forward: true}` is what makes precise hit-region c
 | Build | `electron-vite` | Fast HMR on the renderer, TS for main/preload, sane out of the box |
 | Overlay renderer | **Zero framework** — vanilla TS + CSS | The overlay is one animated sprite. React would add MBs and a reconciler to a window whose entire job is `background-position` |
 | Settings window | React + Tailwind, **created on demand, destroyed on close** | Settings UI benefits from a framework; idle memory shouldn't pay for it |
-| Config | `electron-store` | Atomic JSON, schema validation, migrations for free |
-| Secrets | `safeStorage` + encrypted blob in the store | Keychain on macOS, DPAPI on Windows — satisfies PRD §10 |
+| Config | hand-rolled atomic JSON + zod | Ended up ~60 lines. `electron-store` was the plan, but the only features actually needed were the atomic write and validation |
+| Secrets | `safeStorage` + encrypted blob | Keychain on macOS, DPAPI on Windows. Stores nothing at all if the OS can't encrypt |
 | Input hook | `uiohook-napi` in an Electron `utilityProcess` | §4.2 |
 | Packaging | `electron-builder` | NSIS + DMG, notarization hooks built in |
 | Updates | `electron-updater` → GitHub Releases | Matches the CI plan |
 | Unit tests | Vitest | Manifest parser, cadence classifier, state machine — the pure logic |
-| E2E smoke | `@playwright/test` `_electron` | Asserts window flags are actually applied on each OS |
+| E2E smoke | in-app self-test harness | Drives every state, captures each, asserts the window flags each OS actually applied. Needs no Screen Recording grant, unlike a desktop screenshot |
 
 ---
 
 ## 3. Repo layout
 
 ```
-dott/
-├── src/
-│   ├── main/                    # Electron main process
-│   │   ├── index.ts             # app lifecycle, single-instance lock
-│   │   ├── overlay-window.ts    # transparent/AOT window + platform quirks
-│   │   ├── settings-window.ts   # on-demand, destroyed on close
-│   │   ├── tray.ts              # tray/menu-bar + hotkey registration
-│   │   ├── config.ts            # electron-store schema + migrations
-│   │   ├── state-machine.ts     # signal inputs → single animation state
-│   │   └── sources/             # context providers, each independently killable
-│   │       ├── typing.ts        # spawns + supervises the input utilityProcess
-│   │       └── spotify.ts       # PKCE OAuth + polling
-│   ├── preload/index.ts         # contextBridge — the only main↔renderer surface
-│   ├── overlay/                 # renderer: sprite player, no framework
-│   │   ├── main.ts
-│   │   ├── sprite-player.ts     # CSS steps() animation driver
-│   │   └── hit-region.ts        # mouseenter/leave → setIgnoreMouseEvents
-│   ├── settings/                # renderer: React + Tailwind
-│   └── shared/
-│       ├── manifest.ts          # zod schema — THE contract with design
-│       └── states.ts            # AnimationState union + priority table
-├── characters/
-│   └── dott/
-│       ├── manifest.json
-│       └── atlas/               # packed sprite sheets, @2x + @3x
-├── tools/
-│   └── pack-sprites.ts          # PNG sequence → atlas + manifest generator
-├── build/                       # icons, entitlements.mac.plist, notarize.cjs
-├── .github/workflows/
-│   ├── ci.yml                   # PR: lint + typecheck + test
-│   └── release.yml              # tag: matrix build → signed → draft Release
-└── electron-builder.yml
+src/
+├── main/                    # Electron main process
+│   ├── index.ts             # lifecycle, single-instance lock, signal loop
+│   ├── overlay-window.ts    # transparent/AOT window + platform quirks
+│   ├── tray.ts              # menu-bar/tray menu
+│   ├── config.ts            # hand-rolled atomic JSON + zod schema
+│   ├── characters.ts        # manifest loading + asset:// scheme
+│   ├── secure-store.ts      # safeStorage-encrypted secrets
+│   ├── selftest.ts          # headless window/render verification
+│   ├── typing-hook.ts       # utilityProcess entry: timestamps only
+│   └── sources/
+│       ├── typing.ts        # supervises the hook child
+│       ├── spotify.ts       # PKCE OAuth + adaptive polling
+│       └── pkce.ts
+├── preload/index.ts         # contextBridge — the only main↔renderer surface
+├── overlay/                 # renderer: sprite player, no framework
+│   ├── main.ts              # drag, hit region, wheel resize
+│   └── sprite-player.ts     # CSS steps() driver + duty-cycled motion
+└── shared/                  # pure, unit-tested, no OS imports
+    ├── manifest.ts          # zod schema — THE contract with design
+    ├── states.ts            # AnimationState union + priority table
+    ├── state-machine.ts     # dwell enforcement
+    ├── cadence.ts           # keystroke timing → typing level
+    └── spotify.ts           # response parsing + poll scheduling
+
+characters/dott/             # character bundle: src art, atlas/, manifest.json
+tools/                       # cutout.py (art prep) + pack-sprites.py (build)
+.github/workflows/ci.yml     # macOS + Windows matrix
 ```
+
+> The settings window in the original plan hasn't been built — the tray covers
+> everything so far, and a second persistent renderer would have cost idle
+> memory for a surface opened once a month.
+
 
 ---
 
@@ -199,12 +198,12 @@ Add a **250ms minimum dwell time** per state so a single keystroke during music 
 
 ## 6. Milestones
 
-Estimates assume part-time evening/weekend work alongside AZ-104 prep.
+Estimates assume part-time work.
 
 | # | Milestone | Scope | Exit criteria | Est. |
 |---|---|---|---|---|
 | **M0** | Spike | Transparent, always-on-top, click-through, draggable coloured square. Both OSes. Throwaway code allowed. | Square floats over a full-screen browser and IDE; clicks pass through everywhere except the square; drags across two monitors on both OSes | 3–5 days |
-| **M1** | MVP | Real repo structure. `dott` character via manifest, drag + resize + persistence, tray/menu-bar, global hotkey, settings window. **Measure idle RSS.** | Survives a full workday of real use without annoying you. Position/size/character restore across restart. `grep -r dott src/` returns only a default-config string. Idle RSS recorded. | 2–3 weeks |
+| **M1** | MVP | Real repo structure. `dott` character via manifest, drag + resize + persistence, tray/menu-bar, global hotkey, settings window. **Measure idle RSS.** | Survives a full workday of real use without becoming irritating. Position/size/character restore across restart. `grep -r dott src/` returns only a default-config string. Idle RSS recorded. | 2–3 weeks |
 | **M2** | V1 — typing | `utilityProcess` input hook, cadence classifier, state machine + priority table, privacy copy, macOS permission flow | Typing speed visibly drives idle → calm → fast with no flicker. Killing the hook process degrades to `idle`, app survives. | 1–2 weeks |
 | **M3** | V1.1 — music | Spotify PKCE, `safeStorage` tokens, adaptive polling, graceful offline | Play/pause in Spotify flips the state within ~4s. Airplane mode → silent fall back to `idle`. | 1 week |
 | **M4** | V2 — ship it | Second character (proves G3), CI/CD matrix, code signing both OSes, notarization, auto-update | A pushed git tag produces signed installers for both OSes and a running v(n-1) app updates itself to them, unprompted by you | 2–3 weeks |
@@ -215,7 +214,7 @@ Estimates assume part-time evening/weekend work alongside AZ-104 prep.
 
 ## 7. Process & DevOps
 
-Since this project is explicitly a DevOps practice surface (G4), the pipeline is a deliverable, not overhead.
+The pipeline is treated as a deliverable, not overhead — cross-platform window behaviour cannot be verified from one machine, which makes CI load-bearing here rather than ceremonial.
 
 **Dev workflow:** `git init` (not yet a repo), trunk-based on `main` with short-lived branches. Conventional commits — they let `electron-builder` generate release notes for free. `main` stays releasable.
 
@@ -225,8 +224,8 @@ Since this project is explicitly a DevOps practice surface (G4), the pipeline is
 
 **Signing** — do this early, at the *start* of M4, not the end. It is the step with external dependencies and multi-day latency:
 
-- **macOS:** Apple Developer Program, $99/yr. Developer ID Application certificate; notarize with `notarytool`; needs `entitlements.mac.plist` and hardened runtime. Store `APPLE_ID` / `APPLE_APP_SPECIFIC_PASSWORD` / `APPLE_TEAM_ID` as GitHub secrets. **Note: only Command Line Tools are installed on this machine — verify `xcrun notarytool --help` works, and install full Xcode if it doesn't.**
-- **Windows:** skip traditional OV/EV certs (~$200–400/yr, hardware-token pain in CI). Use **Azure Trusted Signing** — roughly $10/month, cloud-native, designed for exactly this pipeline. It also happens to be Azure identity, RBAC and resource-provider work, which is directly on top of the AZ-104 syllabus. Best value-per-effort item in the entire plan.
+- **macOS:** Apple Developer Program, $99/yr. Developer ID Application certificate; notarize with `notarytool`; needs `entitlements.mac.plist` and hardened runtime. Store `APPLE_ID` / `APPLE_APP_SPECIFIC_PASSWORD` / `APPLE_TEAM_ID` as GitHub secrets. **Note: `notarytool` needs a full Xcode install — Command Line Tools alone may not provide it. Verify `xcrun notarytool --help` before relying on it in CI.**
+- **Windows:** skip traditional OV/EV certs (~$200–400/yr, hardware-token pain in CI). Use **Azure Trusted Signing** — roughly $10/month, cloud-native, designed for exactly this pipeline. Best value-per-effort item in the entire plan.
 
 **Signing matters more here than for a typical app:** an unsigned binary containing a `WH_KEYBOARD_LL` hook is close to the textbook heuristic signature of a keylogger. Signature plus a clear publisher identity is what keeps DOTT out of the AV quarantine.
 
@@ -262,7 +261,7 @@ Note that GitHub's licence picker assumes one licence for the whole repo, so the
 
 **Until this is decided, no `LICENSE` file should be added.** A public repo with no licence defaults to all-rights-reserved, which is the safe state — it can always be loosened later, never tightened.
 
-Worth a quick read of the original commission terms too, to confirm the art is yours to license rather than licensed to you.
+Whoever publishes should also confirm the commission terms leave the art theirs to license, rather than licensed to them.
 
 ## 9. Immediate next actions
 

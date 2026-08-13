@@ -3,8 +3,8 @@
 An always-on animated desktop companion that reacts to what you're doing.
 Cross-platform (macOS + Windows), built on Electron.
 
-See [EXECUTION-PLAN.md](EXECUTION-PLAN.md) for the full roadmap and
-[PRD-Desktop-Companion-App.md](../PRD-Desktop-Companion-App.md) for requirements.
+See [EXECUTION-PLAN.md](EXECUTION-PLAN.md) for the roadmap and
+the architecture decisions, measurements and trade-offs behind it.
 
 Status: **M3 — overlay engine, typing cadence, and Spotify reactivity.** Default size is 170px tall;
 change it from the menu-bar icon or with `Cmd/Ctrl + scroll`.
@@ -170,7 +170,7 @@ app (in development that is `node_modules/electron/dist/Electron.app`), then
 re-tick the toggle. Revoking it at any time just returns Dott to `idle`.
 
 Without the grant, the hook reports cleanly and the tray reads
-**"Typing reactivity — needs permission"**. Verified on this machine:
+**"Typing reactivity — needs permission"**. Observed output:
 
 ```
 hook_run [1405]: Accessibility API is disabled!
