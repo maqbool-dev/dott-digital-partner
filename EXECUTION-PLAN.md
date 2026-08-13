@@ -143,10 +143,12 @@ The platform quirks that will otherwise eat a day each:
 ```
 window        = trailing 3s of timestamps
 kpm           = count / 3 * 60
-idle          if now - lastKey > 2500ms
-typing_fast   if kpm > 280   (exit below 200 — hysteresis)
+idle          if now - lastKey >= 2500ms
+typing_fast   if kpm >= 360   (exit below 260 — hysteresis)
 typing_calm   otherwise
 ```
+
+> **Revised during implementation.** The thresholds were first written as 280/200 kpm. Converting to the familiar unit needs ~6 keystrokes per word (five characters plus a space), which makes 280kpm about **47wpm** — ordinary typing, not fast. That would have made `typing_calm` nearly unreachable and pinned Dott to `typing_fast` for anyone who touch-types. 360/260 kpm is ~60wpm entering and ~43wpm leaving.
 
 The hysteresis band is not optional. Without it the sprite flickers between calm and fast on every pause mid-sentence, which reads as a bug.
 

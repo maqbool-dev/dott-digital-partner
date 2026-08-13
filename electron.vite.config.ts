@@ -6,7 +6,12 @@ export default defineConfig({
     plugins: [externalizeDepsPlugin()],
     build: {
       rollupOptions: {
-        input: resolve(__dirname, 'src/main/index.ts'),
+        input: {
+          index: resolve(__dirname, 'src/main/index.ts'),
+          // The keyboard hook is a separate utilityProcess entry point, so it
+          // must be built as its own bundle rather than inlined into main.
+          'typing-hook': resolve(__dirname, 'src/main/typing-hook.ts'),
+        },
       },
     },
   },

@@ -11,6 +11,7 @@ import {
 import { clampSize, loadConfig, saveConfig } from './config'
 import { OverlayWindow, preloadFile } from './overlay-window'
 import { runSelfTest } from './selftest'
+import { TypingSource } from './sources/typing'
 import { createTray } from './tray'
 import type { BootPayload } from '../preload/index'
 
@@ -28,6 +29,7 @@ let tray: (Electron.Tray & { rebuild: () => void }) | null = null
 let manifest = null as ReturnType<typeof loadManifest> | null
 let forced: AnimationState | null = null
 const machine = new StateMachine()
+const typing = new TypingSource(() => tray?.rebuild())
 
 function pushState(): void {
   if (!overlay || overlay.win.isDestroyed()) return
@@ -99,7 +101,9 @@ app.whenReady().then(() => {
   overlay.win.once('ready-to-show', () => {
     overlay?.reveal()
     const outDir = process.env.DOTT_SELFTEST
-    if (outDir && overlay) void runSelfTest(overlay, outDir)
+    if (outDir && overlay) {
+      void runSelfTest(overlay, outDir, { typingStatus: () => typing.getStatus() })
+    }
   })
 
   if (process.env.DOTT_SELFTEST) {
@@ -147,24 +151,49 @@ app.whenReady().then(() => {
       pushState()
     },
     onCharacter: (name) => loadCharacter(name),
+    onToggleTyping: async (on) => {
+      if (on) {
+        // enable() returns false when it put a permission dialog up instead of
+        // starting, so the checkbox reflects reality rather than intent.
+        const started = await typing.enable(true)
+        saveConfig({ integrations: { ...loadConfig().integrations, typing: started } })
+      } else {
+        typing.disable()
+        saveConfig({ integrations: { ...loadConfig().integrations, typing: false } })
+        machine.update({ typing: 'none' }, Date.now())
+        pushState()
+      }
+      tray?.rebuild()
+    },
+    onOpenTypingPermission: () => void typing.openPermissionSettings(),
     currentState: () => machine.state,
     forcedState: () => forced,
+    typingStatus: () => typing.getStatus(),
     isVisible: () => overlay?.win.isVisible() ?? false,
   }) as Electron.Tray & { rebuild: () => void }
 
   registerHotkey()
+
+  // Previously granted, so start without prompting. If the OS grant was
+  // revoked since, the hook reports it and the tray shows "needs permission".
+  if (cfg.integrations.typing) void typing.enable(false)
 
   // Dwell-blocked transitions still need to land once their window expires,
   // so the machine is ticked rather than only being poked by signal changes.
   // 200ms is well under human perception for an ambient state change and costs
   // nothing measurable.
   const ticker = setInterval(() => {
+    const now = Date.now()
     const before = machine.state
-    if (machine.tick(Date.now()) !== before) pushState()
+    // Cadence is time-derived, not event-derived: it decays back to `none`
+    // when the keystrokes stop, so it must be sampled rather than pushed.
+    machine.update({ typing: typing.level(now) }, now)
+    if (machine.tick(now) !== before) pushState()
   }, 200)
 
   app.on('will-quit', () => {
     clearInterval(ticker)
+    typing.disable()
     globalShortcut.unregisterAll()
   })
 })

@@ -28,7 +28,16 @@ function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms))
 }
 
-export async function runSelfTest(overlay: OverlayWindow, outDir: string): Promise<void> {
+export interface SelfTestProbes {
+  /** Records whether the input hook came up, so CI captures it per-OS. */
+  typingStatus?: () => string
+}
+
+export async function runSelfTest(
+  overlay: OverlayWindow,
+  outDir: string,
+  probes: SelfTestProbes = {},
+): Promise<void> {
   mkdirSync(outDir, { recursive: true })
   const win = overlay.win
 
@@ -85,9 +94,19 @@ export async function runSelfTest(overlay: OverlayWindow, outDir: string): Promi
       scaleFactor: display.scaleFactor,
       workArea: display.workArea,
     },
+    sources: {
+      // 'blocked' on a machine without the OS grant is the expected result and
+      // is not a failure: it proves the hook reported cleanly instead of
+      // taking the app down with it.
+      typing: probes.typingStatus?.() ?? 'off',
+    },
     memory: {
       processCount: metrics.length,
-      // The M1 exit criterion and the Tauri decision gate both key off this.
+      // CAUTION: this sum overcounts badly -- workingSetSize counts shared
+      // framework pages once per process, reporting ~435MB where the real
+      // figure is ~90MB. It is recorded for trend comparison only. The Tauri
+      // decision gate keys off phys_footprint (macOS) / Private Working Set
+      // (Windows) instead. See EXECUTION-PLAN.md section 2.
       totalWorkingSetMB: Number((rssKb / 1024).toFixed(1)),
       byType: metrics.map((m) => ({
         type: m.type,

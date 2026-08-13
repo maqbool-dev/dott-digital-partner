@@ -15,6 +15,7 @@
     "assets": "python3 tools/pack-sprites.py characters/dott"
   },
   "dependencies": {
+    "uiohook-napi": "^1.5.5",
     "zod": "^4.4.3"
   },
   "devDependencies": {

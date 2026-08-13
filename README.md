@@ -6,7 +6,7 @@ Cross-platform (macOS + Windows), built on Electron.
 See [EXECUTION-PLAN.md](EXECUTION-PLAN.md) for the full roadmap and
 [PRD-Desktop-Companion-App.md](../PRD-Desktop-Companion-App.md) for requirements.
 
-Status: **M1 (MVP) — overlay engine complete on macOS.** Default size is 170px tall;
+Status: **M2 — overlay engine + typing cadence, verified on macOS.** Default size is 170px tall;
 change it from the menu-bar icon or with `Cmd/Ctrl + scroll`.
 
 ## Quick start
@@ -127,8 +127,59 @@ things: something permissive for `src/` and `tools/`, and something more
 restrictive for `characters/` so Dott's likeness isn't given away irrevocably.
 See [EXECUTION-PLAN.md](EXECUTION-PLAN.md) §10.
 
+## Typing reactivity (M2)
+
+Dott can animate faster when you type faster. **Off by default**, opt-in from
+the menu-bar icon.
+
+### What it records
+
+Only the **time** of each keystroke. Never which keys.
+
+That is not a promise you have to take on trust — it's checkable. The keyboard
+hook runs in its own process whose entire source is
+[src/main/typing-hook.ts](src/main/typing-hook.ts), a few dozen lines, and the
+only message it can send is `{ t: <milliseconds> }`. Its keydown handler
+doesn't even take the event parameter. No characters, no modifiers, no window
+titles; nothing written to disk, nothing sent anywhere.
+
+The rate is bucketed into `calm` / `fast` by a trailing-window counter with
+hysteresis ([src/shared/cadence.ts](src/shared/cadence.ts)) — 360 keystrokes
+per minute to enter `fast`, 260 to leave it, `idle` after 2.5s of silence. The
+gap between the two thresholds is what stops the animation flickering when
+your speed sits near the boundary.
+
+### Why a separate process
+
+Three reasons, and only the first is about privacy:
+
+1. A crash in the native hook degrades Dott to `idle` instead of taking the app
+   down — the reliability NFR, demonstrated rather than assumed (see below).
+2. The privacy claim becomes auditable in about thirty seconds.
+3. The component antivirus heuristics care about is isolated, so it can be
+   replaced or signed separately without touching the app.
+
+### macOS permission
+
+macOS requires **Input Monitoring**. Dott explains what it captures *before*
+triggering the system prompt — a cold permission dialog asking for keyboard
+access on behalf of a cartoon character deserves to be refused.
+
+To grant it: System Settings → Privacy & Security → Input Monitoring → add the
+app (in development that is `node_modules/electron/dist/Electron.app`), then
+re-tick the toggle. Revoking it at any time just returns Dott to `idle`.
+
+Without the grant, the hook reports cleanly and the tray reads
+**"Typing reactivity — needs permission"**. Verified on this machine:
+
+```
+hook_run [1405]: Accessibility API is disabled!
+[typing] hook reported: Failed to enable access for assistive devices.
+[selftest] ... 5 states captured, 4 processes    <- app unaffected
+```
+
 ## Not yet implemented
 
-M2 typing cadence and M3 Spotify are stubbed as disabled tray toggles — visible
-so the privacy-sensitive feature is discoverable, off by default per FR-13.
-There is no settings window yet; the tray covers M1's surface.
+M3 Spotify reactivity is a disabled tray toggle — visible so the integration is
+discoverable, off by default per FR-13. There is no settings window yet; the
+tray covers everything so far.

@@ -3,15 +3,32 @@ import path from 'node:path'
 import { ANIMATION_STATES, type AnimationState } from '../shared/states'
 import { loadConfig, saveConfig } from './config'
 import { listCharacters } from './characters'
+import type { TypingStatus } from './sources/typing'
 
 export interface TrayHandlers {
   onSize: (size: number) => void
   onToggleVisible: () => void
   onForceState: (state: AnimationState | null) => void
   onCharacter: (name: string) => void
+  onToggleTyping: (on: boolean) => void | Promise<void>
+  onOpenTypingPermission: () => void
   currentState: () => AnimationState
   forcedState: () => AnimationState | null
+  typingStatus: () => TypingStatus
   isVisible: () => boolean
+}
+
+/**
+ * The tray label is the only status surface until there's a settings window,
+ * so a hook that failed or was denied has to be legible here -- silence would
+ * read as "the feature doesn't work".
+ */
+const TYPING_STATUS_SUFFIX: Record<TypingStatus, string> = {
+  off: '',
+  starting: ' (starting…)',
+  running: '',
+  blocked: ' — needs permission',
+  failed: ' — unavailable',
 }
 
 const SIZE_PRESETS: ReadonlyArray<[string, number]> = [
@@ -102,14 +119,22 @@ export function createTray(h: TrayHandlers): Tray {
         },
         { type: 'separator' },
         {
-          label: 'Typing reactivity',
+          label: `Typing reactivity${TYPING_STATUS_SUFFIX[h.typingStatus()]}`,
           type: 'checkbox',
           checked: cfg.integrations.typing,
-          // M2. Kept visible but disabled so the privacy-sensitive feature is
-          // discoverable before it is implemented, not bolted on silently.
-          enabled: false,
-          click: () => {},
+          click: (item) => {
+            void h.onToggleTyping(item.checked)
+            rebuild()
+          },
         },
+        ...(h.typingStatus() === 'blocked'
+          ? [
+              {
+                label: 'Open Input Monitoring settings…',
+                click: () => h.onOpenTypingPermission(),
+              },
+            ]
+          : []),
         {
           label: 'Spotify reactivity',
           type: 'checkbox',
